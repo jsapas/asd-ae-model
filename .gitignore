@@ -28,3 +28,4 @@ pythonvenv/
 *.bak
 *.swp
 Thumbs.db
+test.ipynb
