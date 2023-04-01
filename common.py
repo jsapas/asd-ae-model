@@ -3,6 +3,8 @@
  @brief  Commonly used script
  @author Toshiki Nakamura, Yuki Nikaido, and Yohei Kawaguchi (Hitachi Ltd.)
  Copyright (C) 2020 Hitachi, Ltd. All right reserved.
+
+ modified by jsapas
 """
 
 ########################################################################
@@ -20,6 +22,7 @@ import librosa
 import librosa.core
 import librosa.feature
 import yaml
+from tqdm.auto import tqdm
 
 ########################################################################
 
@@ -46,7 +49,7 @@ logger.addHandler(handler)
 ########################################################################
 # version
 ########################################################################
-__versions__ = "1.0.0"
+__versions__ = "1.0.1"
 ########################################################################
 
 
@@ -167,7 +170,6 @@ def select_dirs(param, mode):
     """
     param : dict
         baseline.yaml data
-
     return :
         if active type the development :
             dirs :  list [ str ]
@@ -184,7 +186,82 @@ def select_dirs(param, mode):
         logger.info("load_directory <- evaluation")
         dir_path = os.path.abspath("{base}/*".format(base=param["eval_directory"]))
         dirs = sorted(glob.glob(dir_path))
+        
+    dirs = [d for d in dirs if os.path.isdir(d)]
+
+    if 'target' in param:
+        def is_one_of_in(substrs, full_str):
+            for s in substrs:
+                if s in full_str: return True
+            return False
+        dirs = [d for d in dirs if is_one_of_in(param["target"], str(d))]
+
     return dirs
 
 ########################################################################
 
+
+def list_to_vector_array(file_list,
+                         msg="calc...",
+                         n_mels=64,
+                         frames=5,
+                         n_fft=1024,
+                         hop_length=512,
+                         power=2.0):
+    """
+    convert the file_list to a vector array.
+    file_to_vector_array() is iterated, and the output vector array is concatenated.
+    file_list : list [ str ]
+        .wav filename list of dataset
+    msg : str ( default = "calc..." )
+        description for tqdm.
+        this parameter will be input into "desc" param at tqdm.
+    return : np.array( np.array( float ) )
+        vector array for training (this function is not used for test.)
+        * dataset.shape = (number of feature vectors, dimensions of feature vectors)
+    """
+    # calculate the number of dimensions
+    dims = n_mels * frames
+
+    # iterate file_to_vector_array()
+    for idx in tqdm(range(len(file_list)), desc=msg):
+        vector_array = file_to_vector_array(file_list[idx],
+                                            n_mels=n_mels,
+                                            frames=frames,
+                                            n_fft=n_fft,
+                                            hop_length=hop_length,
+                                            power=power)
+        if idx == 0:
+            dataset = np.zeros((vector_array.shape[0] * len(file_list), dims), float)
+            logger.info((f'Creating data for {len(file_list)} files: size={dataset.shape[0]}'
+                         f', shape={dataset.shape[1:]}'))
+        dataset[vector_array.shape[0] * idx: vector_array.shape[0] * (idx + 1), :] = vector_array
+
+    return dataset
+
+
+def file_list_generator(target_dir,
+                        dir_name="train",
+                        ext="wav"):
+    """
+    target_dir : str
+        base directory path of the dev_data or eval_data
+    dir_name : str (default="train")
+        directory name containing training data
+    ext : str (default="wav")
+        file extension of audio files
+    return :
+        train_files : list [ str ]
+            file list for training
+    """
+    logger.info("target_dir : {}".format('/'.join(str(target_dir).split('/')[-2:])))
+
+    # generate training list
+    training_list_path = os.path.abspath("{dir}/{dir_name}/*.{ext}".format(dir=target_dir, dir_name=dir_name, ext=ext))
+    files = sorted(glob.glob(training_list_path))
+    if len(files) == 0:
+        logger.exception(f"{training_list_path} -> no_wav_file!!")
+
+    logger.info("# of training samples : {num}".format(num=len(files)))
+    return files
+########################################################################
