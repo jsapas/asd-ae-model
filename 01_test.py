@@ -3,6 +3,8 @@
  @brief  Script for test
  @author Toshiki Nakamura, Yuki Nikaido, and Yohei Kawaguchi (Hitachi Ltd.)
  Copyright (C) 2020 Hitachi, Ltd. All right reserved.
+
+ modified by jsapas
 """
 
 ########################################################################
@@ -205,7 +207,7 @@ if __name__ == "__main__":
             y_pred = [0. for k in test_files]
             for file_idx, file_path in tqdm(enumerate(test_files), total=len(test_files)):
                 try:
-                    data = com.file_to_vector_array(file_path,
+                    data = com.file_to_vector_array_spec(file_path,
                                                     n_mels=param["feature"]["n_mels"],
                                                     frames=param["feature"]["frames"],
                                                     n_fft=param["feature"]["n_fft"],
