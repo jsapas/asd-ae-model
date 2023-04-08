@@ -8,6 +8,7 @@ target: ['slider']
 max_fpr : 0.1
 
 feature:
+  n_spec: 513
   n_mels: 128
   frames : 5
   n_fft: 1024
