@@ -104,7 +104,7 @@ def list_to_vector_array(file_list,
 
     # iterate file_to_vector_array()
     for idx in tqdm(range(len(file_list)), desc=msg):
-        vector_array = com.file_to_vector_array(file_list[idx],
+        vector_array = com.file_to_vector_array_spec(file_list[idx],
                                                 n_mels=n_mels,
                                                 frames=frames,
                                                 n_fft=n_fft,

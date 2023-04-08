@@ -15,6 +15,7 @@ import glob
 import argparse
 import sys
 import os
+import numpy as np
 
 # additional
 import numpy
@@ -119,7 +120,7 @@ def file_load(wav_name, mono=False):
 ########################################################################
 # feature extractor
 ########################################################################
-def file_to_vector_array(file_name,
+def file_to_vector_array_spec(file_name,
                          n_mels=64,
                          frames=5,
                          n_fft=1024,
@@ -136,10 +137,14 @@ def file_to_vector_array(file_name,
         * dataset.shape = (dataset_size, feature_vector_length)
     """
     # 01 calculate the number of dimensions
-    dims = n_mels * frames
+    #dims = n_mels * frames
+    n = (n_fft//2 + 1)
+    dims = (n_fft//2 + 1) * frames
 
     # 02 generate melspectrogram using librosa
     y, sr = file_load(file_name)
+
+    '''
     mel_spectrogram = librosa.feature.melspectrogram(y=y,
                                                      sr=sr,
                                                      n_fft=n_fft,
@@ -149,9 +154,12 @@ def file_to_vector_array(file_name,
 
     # 03 convert melspectrogram to log mel energy
     log_mel_spectrogram = 20.0 / power * numpy.log10(mel_spectrogram + sys.float_info.epsilon)
+    '''
+    D = np.abs(librosa.stft(y, n_fft=n_fft,  hop_length=hop_length))
+    log_spectrogram = 20.0 / power * np.log10(D + sys.float_info.epsilon)
 
     # 04 calculate total vector size
-    vector_array_size = len(log_mel_spectrogram[0, :]) - frames + 1
+    vector_array_size = len(log_spectrogram[0, :]) - frames + 1
 
     # 05 skip too short clips
     if vector_array_size < 1:
@@ -160,7 +168,7 @@ def file_to_vector_array(file_name,
     # 06 generate feature vectors by concatenating multiframes
     vector_array = numpy.zeros((vector_array_size, dims))
     for t in range(frames):
-        vector_array[:, n_mels * t: n_mels * (t + 1)] = log_mel_spectrogram[:, t: t + vector_array_size].T
+        vector_array[:, n * t: n * (t + 1)] = log_spectrogram[:, t: t + vector_array_size].T
 
     return vector_array
 
