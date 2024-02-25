@@ -28,7 +28,6 @@ from tqdm import tqdm
 from sklearn import metrics
 # original lib
 import common as com
-import keras_model_tf
 import tf_keras as keras
 import tensorflow_model_optimization as tfmot
 ########################################################################

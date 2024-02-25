@@ -80,37 +80,6 @@ class visualizer(object):
 
 
 ########################################################################
-
-
-def file_list_generator(target_dir,
-                        dir_name="train",
-                        ext="wav"):
-    """
-    target_dir : str
-        base directory path of the dev_data or eval_data
-    dir_name : str (default="train")
-        directory name containing training data
-    ext : str (default="wav")
-        file extension of audio files
-
-    return :
-        train_files : list [ str ]
-            file list for training
-    """
-    com.logger.info("target_dir : {}".format(target_dir))
-
-    # generate training list
-    training_list_path = os.path.abspath("{dir}/{dir_name}/*.{ext}".format(dir=target_dir, dir_name=dir_name, ext=ext))
-    files = sorted(glob.glob(training_list_path))
-    if len(files) == 0:
-        com.logger.exception("no_wav_file!!")
-
-    com.logger.info("train_file num : {num}".format(num=len(files)))
-    return files
-########################################################################
-
-
-########################################################################
 # main
 ########################################################################
 if __name__ == "__main__":
@@ -148,7 +117,7 @@ if __name__ == "__main__":
 
         # generate dataset
         print("============== DATASET_GENERATOR ==============")
-        files = file_list_generator(target_dir)
+        files = com.file_list_generator(target_dir)
         train_data = com.list_to_vector_array_spec_quant(files,
                                           msg="generate train_dataset",
                                           frames=param["feature"]["frames"],
