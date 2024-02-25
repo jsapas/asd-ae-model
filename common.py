@@ -268,7 +268,7 @@ def file_to_vector_array_spec_quant(file_name,
     #D = np.abs(librosa.stft(y, n_fft=n_fft,  hop_length=hop_length))
     #log_spectrogram = 20.0 / power * np.log10(D + sys.float_info.epsilon)
 
-    quant_spectrogram = get_arm_spectrogram(waveform=y, window_size=n_fft, step_size=hop_length)
+    quant_spectrogram = get_arm_spectrogram(waveform=y, window_size=n_fft, step_size=hop_length).T
 
     # calculate total vector size
     vector_array_size = len(quant_spectrogram[0, :]) - frames + 1
