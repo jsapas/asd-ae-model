@@ -25,6 +25,8 @@ from tqdm import tqdm
 # original lib
 import common as com
 import keras_model_tf
+import tf_keras as keras
+import tensorflow_model_optimization as tfmot
 ########################################################################
 
 
@@ -109,7 +111,7 @@ def file_list_generator(target_dir,
 
 
 ########################################################################
-# main 00_train.py
+# main
 ########################################################################
 if __name__ == "__main__":
     # check mode
@@ -149,7 +151,6 @@ if __name__ == "__main__":
         files = file_list_generator(target_dir)
         train_data = com.list_to_vector_array_spec_quant(files,
                                           msg="generate train_dataset",
-                                          n_mels=param["feature"]["n_mels"],
                                           frames=param["feature"]["frames"],
                                           n_fft=param["feature"]["n_fft"],
                                           hop_length=param["feature"]["hop_length"],
@@ -160,8 +161,24 @@ if __name__ == "__main__":
         model = keras_model_tf.get_model(param["feature"]["n_spec"] * param["feature"]["frames"])
         model.summary()
 
-        model.compile(**param["fit"]["compile"])
-        history = model.fit(train_data,
+        # quantize
+        def apply_qat_to_dense(layer):
+            if isinstance(layer, keras.layers.Dense):
+                return tfmot.quantization.keras.quantize_annotate_layer(layer)
+            return layer
+
+        annotated_model = keras.models.clone_model(
+            model,
+            clone_function=apply_qat_to_dense,
+        )
+
+        quant_aware_model = tfmot.quantization.keras.quantize_apply(annotated_model)
+        print("Quant aware model sumary:")
+        quant_aware_model.summary()
+
+
+        quant_aware_model.compile(**param["fit"]["compile"])
+        history = quant_aware_model.fit(train_data,
                             train_data,
                             epochs=param["fit"]["epochs"],
                             batch_size=param["fit"]["batch_size"],
@@ -171,6 +188,6 @@ if __name__ == "__main__":
         
         visualizer.loss_plot(history.history["loss"], history.history["val_loss"])
         visualizer.save_figure(history_img)
-        model.save(model_file_path)
+        quant_aware_model.save(model_file_path)
         com.logger.info("save_model -> {}".format(model_file_path))
         print("============== END TRAINING ==============")
