@@ -24,6 +24,8 @@ import librosa.core
 import librosa.feature
 import yaml
 from tqdm.auto import tqdm
+import cmsisdsp
+from numpy import pi as PI
 
 ########################################################################
 
@@ -32,11 +34,11 @@ from tqdm.auto import tqdm
 # setup STD I/O
 ########################################################################
 """
-Standard output is logged in "baseline.log".
+Standard output is logged in "train.log".
 """
 import logging
 
-logging.basicConfig(level=logging.DEBUG, filename="baseline.log")
+logging.basicConfig(level=logging.DEBUG, filename="train.log")
 logger = logging.getLogger(' ')
 handler = logging.StreamHandler()
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
@@ -50,7 +52,7 @@ logger.addHandler(handler)
 ########################################################################
 # version
 ########################################################################
-__versions__ = "1.0.1"
+__versions__ = "1.0.2"
 ########################################################################
 
 
@@ -65,7 +67,7 @@ def command_line_chk():
     args = parser.parse_args()
     if args.version:
         print("===============================")
-        print("DCASE 2020 task 2 baseline\nversion {}".format(__versions__))
+        print("Anomaly detection baseline and other ARM based models\nversion {}".format(__versions__))
         print("===============================\n")
     if args.eval ^ args.dev:
         if args.dev:
@@ -120,6 +122,47 @@ def file_load(wav_name, mono=False):
 ########################################################################
 # feature extractor
 ########################################################################
+def get_arm_spectrogram(waveform, window_size, step_size):
+
+    hanning_window_f32 = np.zeros(window_size)
+    for i in range(window_size):
+        hanning_window_f32[i] = 0.5 * (1 - cmsisdsp.arm_cos_f32(2 * PI * i / window_size ))
+
+    hanning_window_q15 = cmsisdsp.arm_float_to_q15(hanning_window_f32)
+
+    rfftq15 = cmsisdsp.arm_rfft_instance_q15()
+    #status = cmsisdsp.arm_rfft_init_q15(rfftq15, window_size, 0, 1)
+
+    num_frames = int(1 + (len(waveform) - window_size) // step_size)
+    fft_size = int(window_size // 2 + 1)
+
+    # Convert the audio to q15
+    waveform_q15 = cmsisdsp.arm_float_to_q15(waveform)
+
+    # Create empty spectrogram array
+    spectrogram_q15 = np.empty((num_frames, fft_size), dtype = np.int16)
+
+    start_index = 0
+
+    for index in range(num_frames):
+        # Take the window from the waveform.
+        window = waveform_q15[start_index:start_index + window_size]
+
+        # Apply the Hanning Window.
+        window = cmsisdsp.arm_mult_q15(window, hanning_window_q15)
+
+        # Calculate the FFT, shift by 7 according to docs
+        window = cmsisdsp.arm_rfft_q15(rfftq15, window)
+
+        # Take the absolute value of the FFT and add to the Spectrogram.
+        spectrogram_q15[index] = cmsisdsp.arm_cmplx_mag_q15(window)[:fft_size]
+
+        # Increase the start index of the window by the overlap amount.
+        start_index += step_size
+
+    # Convert to numpy output ready for keras
+    return cmsisdsp.arm_q15_to_float(spectrogram_q15).reshape(num_frames,fft_size) * 512
+
 def file_to_vector_array(file_name,
                          n_mels=64,
                          frames=5,
@@ -203,6 +246,43 @@ def file_to_vector_array_spec(file_name,
     vector_array = numpy.zeros((vector_array_size, dims))
     for t in range(frames):
         vector_array[:, n * t: n * (t + 1)] = log_spectrogram[:, t: t + vector_array_size].T
+
+    return vector_array
+
+def file_to_vector_array_spec_quant(file_name,
+                         n_mels=64,
+                         frames=5,
+                         n_fft=1024,
+                         hop_length=512,
+                         power=2.0):
+    """
+    convert file_name to a vector array.
+
+    quantized version of file_to_vector_array_spec()
+    """
+    # calculate the number of dimensions
+    n = (n_fft//2 + 1)
+    dims = n * frames
+
+    y, sr = file_load(file_name)
+
+    # generate spectrogram using cmsisdsp
+    #D = np.abs(librosa.stft(y, n_fft=n_fft,  hop_length=hop_length))
+    #log_spectrogram = 20.0 / power * np.log10(D + sys.float_info.epsilon)
+
+    quant_spectrogram = get_arm_spectrogram(waveform=y, window_size=n_fft, step_size=hop_length)
+
+    # calculate total vector size
+    vector_array_size = len(quant_spectrogram[0, :]) - frames + 1
+
+    # skip too short clips
+    if vector_array_size < 1:
+        return numpy.empty((0, dims))
+
+    # generate feature vectors by concatenating multiframes
+    vector_array = numpy.zeros((vector_array_size, dims))
+    for t in range(frames):
+        vector_array[:, n * t: n * (t + 1)] = quant_spectrogram[:, t: t + vector_array_size].T
 
     return vector_array
 
@@ -307,6 +387,36 @@ def list_to_vector_array_spec(file_list,
     # iterate file_to_vector_array()
     for idx in tqdm(range(len(file_list)), desc=msg):
         vector_array = file_to_vector_array_spec(file_list[idx],
+                                            n_mels=n_mels,
+                                            frames=frames,
+                                            n_fft=n_fft,
+                                            hop_length=hop_length,
+                                            power=power)
+        if idx == 0:
+            dataset = np.zeros((vector_array.shape[0] * len(file_list), dims), float)
+            logger.info((f'Creating data for {len(file_list)} files: size={dataset.shape[0]}'
+                         f', shape={dataset.shape[1:]}'))
+        dataset[vector_array.shape[0] * idx: vector_array.shape[0] * (idx + 1), :] = vector_array
+
+    return dataset
+
+def list_to_vector_array_spec_quant(file_list,
+                         msg="calc...",
+                         n_mels=64,
+                         frames=5,
+                         n_fft=1024,
+                         hop_length=512,
+                         power=2.0):
+    """
+    quantized version of list_to_vector_array_spec()
+    """
+    # calculate the number of dimensions
+    n = (n_fft//2 + 1)
+    dims = n * frames
+
+    # iterate file_to_vector_array()
+    for idx in tqdm(range(len(file_list)), desc=msg):
+        vector_array = file_to_vector_array_spec_quant(file_list[idx],
                                             n_mels=n_mels,
                                             frames=frames,
                                             n_fft=n_fft,

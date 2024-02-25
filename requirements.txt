@@ -1,13 +1,11 @@
 # Minimal packages to use
-keras
-Keras-Applications
-Keras-Preprocessing
 matplotlib
 numpy
 PyYAML
 scikit-learn
 librosa
 audioread
-setuptools
 tensorflow
+tensorflow_model_optimization
 tqdm
+cmsisdsp
