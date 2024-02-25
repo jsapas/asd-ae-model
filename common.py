@@ -210,7 +210,6 @@ def file_to_vector_array(file_name,
     return vector_array
 
 def file_to_vector_array_spec(file_name,
-                         n_mels=64,
                          frames=5,
                          n_fft=1024,
                          hop_length=512,
@@ -250,7 +249,6 @@ def file_to_vector_array_spec(file_name,
     return vector_array
 
 def file_to_vector_array_spec_quant(file_name,
-                         n_mels=64,
                          frames=5,
                          n_fft=1024,
                          hop_length=512,
@@ -363,7 +361,6 @@ def list_to_vector_array(file_list,
 
 def list_to_vector_array_spec(file_list,
                          msg="calc...",
-                         n_mels=64,
                          frames=5,
                          n_fft=1024,
                          hop_length=512,
@@ -387,7 +384,6 @@ def list_to_vector_array_spec(file_list,
     # iterate file_to_vector_array()
     for idx in tqdm(range(len(file_list)), desc=msg):
         vector_array = file_to_vector_array_spec(file_list[idx],
-                                            n_mels=n_mels,
                                             frames=frames,
                                             n_fft=n_fft,
                                             hop_length=hop_length,
@@ -417,13 +413,12 @@ def list_to_vector_array_spec_quant(file_list,
     # iterate file_to_vector_array()
     for idx in tqdm(range(len(file_list)), desc=msg):
         vector_array = file_to_vector_array_spec_quant(file_list[idx],
-                                            n_mels=n_mels,
                                             frames=frames,
                                             n_fft=n_fft,
                                             hop_length=hop_length,
                                             power=power)
         if idx == 0:
-            dataset = np.zeros((vector_array.shape[0] * len(file_list), dims), float)
+            dataset = np.zeros((vector_array.shape[0] * len(file_list), dims), np.int16)
             logger.info((f'Creating data for {len(file_list)} files: size={dataset.shape[0]}'
                          f', shape={dataset.shape[1:]}'))
         dataset[vector_array.shape[0] * idx: vector_array.shape[0] * (idx + 1), :] = vector_array
