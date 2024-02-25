@@ -131,7 +131,7 @@ def get_arm_spectrogram(waveform, window_size, step_size):
     hanning_window_q15 = cmsisdsp.arm_float_to_q15(hanning_window_f32)
 
     rfftq15 = cmsisdsp.arm_rfft_instance_q15()
-    #status = cmsisdsp.arm_rfft_init_q15(rfftq15, window_size, 0, 1)
+    status = cmsisdsp.arm_rfft_init_q15(rfftq15, window_size, 0, 1)
 
     num_frames = int(1 + (len(waveform) - window_size) // step_size)
     fft_size = int(window_size // 2 + 1)
