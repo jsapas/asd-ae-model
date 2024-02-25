@@ -20,7 +20,7 @@ fit:
   compile:
     optimizer : adam
     loss : mean_squared_error
-  epochs : 10
+  epochs : 40
   batch_size : 512
   shuffle : True
   validation_split : 0.1
