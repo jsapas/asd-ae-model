@@ -29,6 +29,8 @@ from sklearn import metrics
 # original lib
 import common as com
 import keras_model_tf
+import tf_keras as keras
+import tensorflow_model_optimization as tfmot
 ########################################################################
 
 
@@ -181,7 +183,8 @@ if __name__ == "__main__":
         if not os.path.exists(model_file):
             com.logger.error("{} model not found ".format(machine_type))
             sys.exit(-1)
-        model = keras_model_tf.load_model(model_file)
+        with tfmot.quantization.keras.quantize_scope():
+            model = keras.models.load_model(model_file)
         model.summary()
 
         if mode:
