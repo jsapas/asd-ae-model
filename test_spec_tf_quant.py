@@ -79,7 +79,8 @@ def test_file_list_generator(target_dir,
                              dir_name="test",
                              prefix_normal="normal",
                              prefix_anomaly="anomaly",
-                             ext="wav"):
+                             ext="wav",
+                             mode=True):
     """
     target_dir : str
         base directory path of the dev_data or eval_data
