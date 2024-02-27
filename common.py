@@ -43,7 +43,7 @@ import logging
 
 #logging.basicConfig(level=logging.DEBUG, filename="train.log")
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger()
+logger = logging.getLogger('common')
 handler = logging.StreamHandler()
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
