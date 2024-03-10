@@ -246,6 +246,29 @@ def file_to_vector_array_spec(file_name,
 
     return vector_array
 
+
+def file_to_vector_array_mfcc(file_path, frames=4, n_fft=256, hop_length=128, n_mfcc=20):
+    # Load the audio file
+    audio, sample_rate = librosa.load(file_path, sr=None, mono=True)
+
+    # Compute MFCC features
+    mfccs = librosa.feature.mfcc(y=audio, sr=sample_rate, n_fft=n_fft, hop_length=hop_length).T
+
+    # Calculate the number of rows that will be left after division
+    remaining_rows = mfccs.shape[0] % frames
+
+    # Pad the array
+    pad_rows = frames - remaining_rows if remaining_rows != 0 else 0
+    if pad_rows > 0:
+        padding = np.zeros((pad_rows, mfccs.shape[1]))
+        mfccs = np.vstack((mfccs, padding))
+
+    # Reshape the array
+    vector_array = mfccs.reshape(-1, n_mfcc * frames)
+
+    return vector_array
+
+
 def file_to_vector_array_spec_quant(file_name,
                          frames=5,
                          n_fft=1024,
@@ -393,6 +416,33 @@ def list_to_vector_array_spec(file_list,
         dataset[vector_array.shape[0] * idx: vector_array.shape[0] * (idx + 1), :] = vector_array
 
     return dataset
+
+def list_to_vector_array_mfcc(file_list,
+                         msg="calc...",
+                         frames=5,
+                         n_fft=1024,
+                         hop_length=512,
+                         n_mfcc=20):
+
+    # calculate the number of dimensions
+    n = (n_fft//2 + 1)
+    dims = n * frames
+
+    # iterate file_to_vector_array()
+    for idx in tqdm(range(len(file_list)), desc=msg):
+        vector_array = file_to_vector_array_mfcc(file_list[idx],
+                                            frames=frames,
+                                            n_fft=n_fft,
+                                            hop_length=hop_length,
+                                            n_mfcc=n_mfcc)
+        if idx == 0:
+            dataset = np.zeros((vector_array.shape[0] * len(file_list), dims), float)
+            logger.info((f'Creating data for {len(file_list)} files: size={dataset.shape[0]}'
+                         f', shape={dataset.shape[1:]}'))
+        dataset[vector_array.shape[0] * idx: vector_array.shape[0] * (idx + 1), :] = vector_array
+
+    return dataset
+
 
 def list_to_vector_array_spec_quant(file_list,
                          msg="calc...",

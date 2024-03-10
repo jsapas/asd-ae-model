@@ -1,6 +1,6 @@
 """
  @file   keras_model_py
- @brief  Script for keras tf model definition
+ @desc  Script for keras tf model definition
  @author jsapas
 """
 
