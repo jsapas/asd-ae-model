@@ -59,3 +59,6 @@ def get_model(inputDim):
     model.add(keras.layers.Dense(inputDim))
 
     return model
+
+def load_model(file_path):
+    return keras.models.load_model(file_path)
