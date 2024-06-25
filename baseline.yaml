@@ -3,7 +3,7 @@ eval_directory : ../drive/MyDrive/thesis/eval_data
 model_directory: ./model
 result_directory: ./result
 result_file: result.csv
-target: ['slider']
+target: ['fan']
 
 max_fpr : 0.1
 
