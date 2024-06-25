@@ -149,7 +149,6 @@ if __name__ == "__main__":
         files = file_list_generator(target_dir)
         train_data = com.list_to_vector_array_spec(files,
                                           msg="generate train_dataset",
-                                          n_mels=param["feature"]["n_mels"],
                                           frames=param["feature"]["frames"],
                                           n_fft=param["feature"]["n_fft"],
                                           hop_length=param["feature"]["hop_length"],
